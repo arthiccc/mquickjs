@@ -373,6 +373,37 @@ make octane
 
 MQuickJS is released under the MIT license.
 
-Unless otherwise specified, the MQuickJS sources are copyright Fabrice
-Bellard and Charlie Gordon.
+# µGauntlet
+
+A high-performance benchmark and coding challenge tool built on **MicroQuickJS**.
+
+## Features
+- **Extreme Efficiency**: Runs JavaScript benchmarks in as little as 8KB of RAM.
+- **Gamer Mode**: Retro-styled CLI benchmarks with "µMarks" scoring.
+- **Junior Dev Challenges**: Test your coding efficiency under strict memory constraints.
+- **Tiny Footprint**: The entire engine and harness are under 200KB.
+
+## Built Files
+- `gauntlet`: The C harness / runner.
+- `benchmarks.js`: Ray-caster and Mandelbrot benchmarks.
+- `gamer_bench.js`: Physics simulation benchmark with ANSI progress bar.
+- `solution.js`: RLE Compression challenge for Junior Devs.
+
+## Usage
+
+### Run Benchmarks
+```bash
+./gauntlet benchmarks.js 32  # 32KB RAM limit
+./gauntlet gamer_bench.js 32
+```
+
+### Run Coding Challenges
+Challenge your memory efficiency!
+```bash
+./gauntlet solution.js 10  # Try to pass in 10KB
+./gauntlet solution.js 8   # Can you do it in 8KB?
+```
+
+## How it works
+The `gauntlet` harness initializes the MicroQuickJS engine with a fixed-size heap. If your JavaScript code exceeds this limit, the engine will safely throw a "stack overflow" or "out of memory" error, making it the perfect tool for competitive "golfing" or embedded development testing.
 

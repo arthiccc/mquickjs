@@ -1,0 +1,12 @@
+*.o
+*.d
+gauntlet
+mqjs
+example
+example_stdlib
+mqjs_stdlib
+*.host.o
+*.host.d
+mquickjs_atom.h
+mqjs_stdlib.h
+example_stdlib.h
