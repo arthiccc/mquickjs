@@ -10,3 +10,16 @@ mqjs_stdlib
 mquickjs_atom.h
 mqjs_stdlib.h
 example_stdlib.h
+gauntlet_pro
+gauntlet_pro_stdlib.h
+gauntlet_pro_stdlib_gen
+ustatic
+ustatic_stdlib.h
+ustatic_stdlib_gen
+ubrain
+ubrain_stdlib.h
+ubrain_stdlib_gen
+uchip8
+useries
+useries_stdlib.h
+useries_stdlib_gen
