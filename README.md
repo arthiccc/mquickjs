@@ -373,37 +373,41 @@ make octane
 
 MQuickJS is released under the MIT license.
 
-# µGauntlet
+# The µSeries (Community Projects)
 
-A high-performance benchmark and coding challenge tool built on **MicroQuickJS**.
+This repository now includes the **µSeries**, a collection of hardcore minimalist tools built on top of the MicroQuickJS engine to showcase its extreme efficiency.
 
-## Features
-- **Extreme Efficiency**: Runs JavaScript benchmarks in as little as 8KB of RAM.
-- **Gamer Mode**: Retro-styled CLI benchmarks with "µMarks" scoring.
-- **Junior Dev Challenges**: Test your coding efficiency under strict memory constraints.
-- **Tiny Footprint**: The entire engine and harness are under 200KB.
+## 1. µGauntlet Pro: 16KB Hardcore 3D Engine
+An interactive, real-time 3D raycaster (Wolfenstein-style) that runs in your terminal with a strict **16KB RAM budget**.
 
-## Built Files
-- `gauntlet`: The C harness / runner.
-- `benchmarks.js`: Ray-caster and Mandelbrot benchmarks.
-- `gamer_bench.js`: Physics simulation benchmark with ANSI progress bar.
-- `solution.js`: RLE Compression challenge for Junior Devs.
-
-## Usage
-
-### Run Benchmarks
+### Usage
 ```bash
-./gauntlet benchmarks.js 32  # 32KB RAM limit
-./gauntlet gamer_bench.js 32
+./gauntlet_pro world.js
+```
+- **Controls**: W/S (Move), A/D (Rotate), Q (Quit).
+- **Hard Limit**: Crashing at >16,384 bytes.
+
+## 2. µStatic: Minimalist SSG
+A high-performance Static Site Generator that converts Markdown to HTML using less than 1MB of RAM.
+
+### Usage
+```bash
+./ustatic ssg.js
+```
+- **Content**: Edit files in `content/`.
+- **Template**: Customize `layout.html`.
+- **Output**: Check the `public/` folder.
+
+## 3. µGauntlet: Benchmarks & Challenges
+The original benchmark suite and memory efficiency challenge for Junior Devs.
+
+### Usage
+```bash
+./gauntlet gamer_bench.js 32  # Gamer Benchmark
+./gauntlet benchmarks.js 32   # Technical Benchmarks (Raycaster/Mandelbrot)
+./gauntlet solution.js 10     # Junior Dev Challenge (10KB limit)
 ```
 
-### Run Coding Challenges
-Challenge your memory efficiency!
-```bash
-./gauntlet solution.js 10  # Try to pass in 10KB
-./gauntlet solution.js 8   # Can you do it in 8KB?
-```
-
-## How it works
-The `gauntlet` harness initializes the MicroQuickJS engine with a fixed-size heap. If your JavaScript code exceeds this limit, the engine will safely throw a "stack overflow" or "out of memory" error, making it the perfect tool for competitive "golfing" or embedded development testing.
+## How it Works
+Each tool in the µSeries uses a custom C harness that initializes MicroQuickJS with a fixed-size heap. If the JavaScript logic exceeds the allocated memory, the engine triggers an immediate out-of-memory or stack-overflow exception, enforcing "Memory Miser" coding standards.
 
