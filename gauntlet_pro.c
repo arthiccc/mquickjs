@@ -10,13 +10,13 @@
 #include "cutils.h"
 #include "mquickjs.h"
 
-#define WIDTH 80
-#define HEIGHT 24
-static uint8_t frame_buffer[WIDTH * HEIGHT];
+#define WIDTH 64
+#define HEIGHT 32
+static uint8_t vram[WIDTH * HEIGHT];
 
 static struct termios old_tty;
 static void restore_term(void) {
-    printf("\x1b[?25h"); // Show cursor
+    printf("\x1b[?25h"); 
     tcsetattr(STDIN_FILENO, TCSANOW, &old_tty);
 }
 
@@ -29,41 +29,32 @@ static void setup_term(void) {
     tty.c_cc[VMIN] = 0;
     tty.c_cc[VTIME] = 0;
     tcsetattr(STDIN_FILENO, TCSANOW, &tty);
-    printf("\x1b[?25l"); // Hide cursor
+    printf("\x1b[?25l");
 }
 
-static char *read_file_to_str(const char *filename) {
-    FILE *f = fopen(filename, "rb");
-    if (!f) return NULL;
-    fseek(f, 0, SEEK_END);
-    long len = ftell(f);
-    fseek(f, 0, SEEK_SET);
-    char *buf = malloc(len + 1);
-    size_t n = fread(buf, 1, len, f);
-    buf[n] = '\0';
-    fclose(f);
-    return buf;
-}
+static JSValue js_gauntlet_set(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv) { return JS_UNDEFINED; }
 
-static JSValue js_gauntlet_set(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv) {
-    int x, y, c;
-    if (JS_ToInt32(ctx, &x, argv[0])) return JS_EXCEPTION;
-    if (JS_ToInt32(ctx, &y, argv[1])) return JS_EXCEPTION;
-    if (JS_ToInt32(ctx, &c, argv[2])) return JS_EXCEPTION;
-    if (x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT) {
-        frame_buffer[y * WIDTH + x] = (uint8_t)c;
-    }
+static JSValue js_draw(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv) {
+    int x, y, val;
+    JS_ToInt32(ctx, &x, argv[0]);
+    JS_ToInt32(ctx, &y, argv[1]);
+    JS_ToInt32(ctx, &val, argv[2]);
+    if (x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT) vram[y * WIDTH + x] = val;
     return JS_UNDEFINED;
 }
 
 static JSValue js_gauntlet_flush(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv) {
-    printf("\x1b[H"); // Home
-    for (int y = 0; y < HEIGHT; y++) {
-        fwrite(&frame_buffer[y * WIDTH], 1, WIDTH, stdout);
-        if (y < HEIGHT - 1) putchar('\n');
+    printf("\x1b[H");
+    for (int y = 0; y < HEIGHT; y += 2) {
+        for (int x = 0; x < WIDTH; x++) {
+            int t = vram[y * WIDTH + x];
+            int b = vram[(y + 1) * WIDTH + x];
+            if (t && b) printf("█"); else if (t) printf("▀"); else if (b) printf("▄"); else printf(" ");
+        }
+        putchar('\n');
     }
     fflush(stdout);
-    usleep(33333); // Cap at ~30 FPS to avoid flooding terminal
+    usleep(16666);
     return JS_UNDEFINED;
 }
 
@@ -73,44 +64,76 @@ static JSValue js_gauntlet_poll(JSContext *ctx, JSValue *this_val, int argc, JSV
     return JS_NewInt32(ctx, 0);
 }
 
+static JSValue js_get_rom(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv) {
+    JSCStringBuf b;
+    const char *path = JS_ToCString(ctx, argv[0], &b);
+    FILE *f = fopen(path, "rb");
+    if (!f) return JS_NULL;
+    fseek(f, 0, SEEK_END);
+    int size = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    JSGCRef arr_ref;
+    JSValue *arr = JS_PushGCRef(ctx, &arr_ref);
+    *arr = JS_NewArray(ctx, size);
+    for (int i = 0; i < size; i++) JS_SetPropertyUint32(ctx, *arr, i, JS_NewInt32(ctx, fgetc(f)));
+    fclose(f);
+    return JS_PopGCRef(ctx, &arr_ref);
+}
+
 static JSValue js_performance_now(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv) {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     return JS_NewInt64(ctx, (uint64_t)ts.tv_sec * 1000 + (ts.tv_nsec / 1000000));
 }
 
-// Minimal stubs for full stdlib compatibility if needed
-static JSValue js_print(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv) { return JS_UNDEFINED; }
+static JSValue js_print(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv) {
+    for(int i = 0; i < argc; i++) {
+        if (i != 0) putchar(' ');
+        JSCStringBuf buf;
+        const char *str = JS_ToCString(ctx, argv[i], &buf);
+        if (str) printf("%s", str);
+    }
+    putchar('\n');
+    return JS_UNDEFINED;
+}
+
 static JSValue js_gc(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv) { JS_GC(ctx); return JS_UNDEFINED; }
 static JSValue js_date_now(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv) { return JS_NewInt32(ctx, 0); }
+static JSValue js_load(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv) { return JS_UNDEFINED; }
+static JSValue js_setTimeout(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv) { return JS_UNDEFINED; }
+static JSValue js_clearTimeout(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv) { return JS_UNDEFINED; }
 
 #include "gauntlet_pro_stdlib.h"
 
 int main(int argc, char **argv) {
-    if (argc < 2) { printf("usage: gauntlet_pro script.js\n"); return 1; }
-    
-    size_t mem_size = 16 * 1024; // THE HARD LIMIT
+    if (argc < 2) return 1;
+    size_t mem_size = 1024 * 1024;
     uint8_t *mem_buf = malloc(mem_size);
-    if (!mem_buf) return 1;
-    
     setup_term();
-    
     JSContext *ctx = JS_NewContext(mem_buf, mem_size, &gauntlet_pro_stdlib);
+    JSValue global = JS_GetGlobalObject(ctx);
+    if (argc >= 3) JS_SetPropertyStr(ctx, global, "ROM_PATH", JS_NewString(ctx, argv[2]));
     
-    char *script = read_file_to_str(argv[1]);
-    if (!script) return 1;
-    
-    JSValue val = JS_Eval(ctx, script, strlen(script), argv[1], 0);
+    FILE *f = fopen(argv[1], "rb");
+    fseek(f, 0, SEEK_END);
+    long len = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    char *script = malloc(len + 1);
+    fread(script, 1, len, f);
+    script[len] = '\0';
+    fclose(f);
+
+    printf("DEBUG: Starting eval...\n");
+    JSValue val = JS_Eval(ctx, script, len, argv[1], 0);
     if (JS_IsException(val)) {
         restore_term();
         JSValue ex = JS_GetException(ctx);
-        printf("\x1b[31mCRASH: ");
-        JS_PrintValueF(ctx, ex, JS_DUMP_LONG);
-        printf("\x1b[0m\n");
+        JSCStringBuf buf;
+        const char *msg = JS_ToCString(ctx, ex, &buf);
+        printf("CRASH: %s\n", msg ? msg : "unknown");
+    } else {
+        printf("DEBUG: Eval success\n");
     }
-    
     JS_FreeContext(ctx);
-    free(script);
-    free(mem_buf);
     return 0;
 }

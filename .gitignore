@@ -22,4 +22,8 @@ ubrain_stdlib_gen
 uchip8
 useries
 useries_stdlib.h
-useries_stdlib_gen
+gauntlet_pro_stdlib
+ustatic_stdlib
+useries_stdlib
+public/
+test_builtin.bin

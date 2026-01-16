@@ -75,12 +75,13 @@ ifdef CONFIG_ARM32
 MQJS_BUILD_FLAGS=-m32
 endif
 
-PROGS=mqjs$(EXE) example$(EXE)
+PROGS=mqjs$(EXE) example$(EXE) gauntlet_pro$(EXE) ustatic$(EXE) ubrain$(EXE) uchip8$(EXE) useries$(EXE)
 TEST_PROGS=dtoa_test libm_test 
 
 all: $(PROGS)
 
-MQJS_OBJS=mqjs.o readline_tty.o readline.o mquickjs.o dtoa.o libm.o cutils.o
+COMMON_OBJS=mquickjs.o dtoa.o libm.o cutils.o
+MQJS_OBJS=mqjs.o readline_tty.o readline.o $(COMMON_OBJS)
 LIBS=-lm
 
 mqjs$(EXE): $(MQJS_OBJS)
@@ -99,10 +100,58 @@ mqjs_stdlib.h: mqjs_stdlib
 
 mqjs.o: mqjs_stdlib.h
 
+# µGauntlet Pro
+gauntlet_pro.o: gauntlet_pro_stdlib.h
+
+gauntlet_pro$(EXE): gauntlet_pro.o $(COMMON_OBJS)
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+gauntlet_pro_stdlib: gauntlet_pro_stdlib.host.o mquickjs_build.host.o
+	$(HOST_CC) $(HOST_LDFLAGS) -o $@ $^
+
+gauntlet_pro_stdlib.h: gauntlet_pro_stdlib
+	./gauntlet_pro_stdlib $(MQJS_BUILD_FLAGS) > $@
+
+# µStatic
+ustatic.o: ustatic_stdlib.h
+
+ustatic$(EXE): ustatic.o $(COMMON_OBJS)
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+ustatic_stdlib: ustatic_stdlib.host.o mquickjs_build.host.o
+	$(HOST_CC) $(HOST_LDFLAGS) -o $@ $^
+
+ustatic_stdlib.h: ustatic_stdlib
+	./ustatic_stdlib $(MQJS_BUILD_FLAGS) > $@
+
+# µBrain
+ubrain$(EXE): ubrain.o $(COMMON_OBJS)
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+ubrain.o: mqjs_stdlib.h
+
+# µCHIP-8
+uchip8$(EXE): uchip8.o $(COMMON_OBJS)
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+uchip8.o: gauntlet_pro_stdlib.h
+
+# µSeries Multiplexer
+useries.o: useries_stdlib.h
+
+useries$(EXE): useries.o $(COMMON_OBJS)
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+useries_stdlib: useries_stdlib.host.o mquickjs_build.host.o
+	$(HOST_CC) $(HOST_LDFLAGS) -o $@ $^
+
+useries_stdlib.h: useries_stdlib
+	./useries_stdlib $(MQJS_BUILD_FLAGS) > $@
+
 # C API example
 example.o: example_stdlib.h
 
-example$(EXE): example.o mquickjs.o dtoa.o libm.o cutils.o
+example$(EXE): example.o $(COMMON_OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 example_stdlib: example_stdlib.host.o mquickjs_build.host.o
@@ -147,6 +196,9 @@ rempio2_test: tests/rempio2_test.o libm.o
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 clean:
-	rm -f *.o *.d *~ tests/*.o tests/*.d tests/*~ test_builtin.bin mqjs_stdlib mqjs_stdlib.h mquickjs_build_atoms mquickjs_atom.h mqjs_example example_stdlib example_stdlib.h $(PROGS) $(TEST_PROGS)
+	rm -f *.o *.d *~ tests/*.o tests/*.d tests/*~ test_builtin.bin 
+	rm -f mqjs_stdlib mqjs_stdlib.h mquickjs_build_atoms mquickjs_atom.h mqjs_example example_stdlib example_stdlib.h
+	rm -f gauntlet_pro_stdlib gauntlet_pro_stdlib.h ustatic_stdlib ustatic_stdlib.h useries_stdlib useries_stdlib.h
+	rm -f $(PROGS) $(TEST_PROGS)
 
 -include $(wildcard *.d)

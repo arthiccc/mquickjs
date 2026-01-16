@@ -6,10 +6,13 @@
 #include "mquickjs.h"
 #include "mquickjs_build.h"
 
-// Prototypes for gauntlet_pro
+// Prototypes for all Gauntlet Series functions
 static JSValue js_gauntlet_set(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv);
 static JSValue js_gauntlet_flush(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv);
 static JSValue js_gauntlet_poll(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv);
+static JSValue js_draw(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv);
+static JSValue js_get_rom(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv);
+static JSValue js_performance_now(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv);
 
 // Include standard library logic
 #define main mqjs_main
@@ -25,11 +28,14 @@ static const JSPropDef gauntlet_pro_global_object[] = {
     JS_PROP_CLASS_DEF("Array", &js_array_class),
     JS_PROP_CLASS_DEF("Math", &js_math_obj),
     
-    // Gauntlet Pro Bindings
+    // Gauntlet Pro + CHIP8 Bindings
     JS_CFUNC_DEF("set", 3, js_gauntlet_set),
+    JS_CFUNC_DEF("draw", 3, js_draw),
     JS_CFUNC_DEF("flush", 0, js_gauntlet_flush),
     JS_CFUNC_DEF("poll", 0, js_gauntlet_poll),
+    JS_CFUNC_DEF("get_rom", 1, js_get_rom),
     JS_CFUNC_DEF("performance_now", 0, js_performance_now),
+
     
     JS_PROP_END,
 };
